@@ -65,6 +65,9 @@ class ASLScraper:
         # Load or initialize progress
         self.progress = self.load_progress()
         
+        # Load existing videos from S3 to skip duplicates
+        self.existing_videos = self.load_existing_videos_from_s3()
+        
     def setup_logging(self):
         """Setup logging configuration"""
         log_dir = Path("logs")
@@ -105,6 +108,33 @@ class ASLScraper:
         self.progress["last_updated"] = datetime.now().isoformat()
         with open(self.progress_file, 'w') as f:
             json.dump(self.progress, f, indent=2)
+    
+    def load_existing_videos_from_s3(self) -> set:
+        """Load list of already-scraped videos from S3 to avoid duplicates"""
+        existing = set()
+        
+        if not self.config.get("upload_to_s3", True):
+            return existing
+        
+        try:
+            self.logger.info("Loading existing videos from S3...")
+            paginator = self.s3_client.get_paginator('list_objects_v2')
+            
+            for page in paginator.paginate(Bucket=self.bucket_name):
+                if 'Contents' in page:
+                    for obj in page['Contents']:
+                        # Extract sign name from S3 key (e.g., "a/abandon.mp4" -> "abandon")
+                        key = obj['Key']
+                        if '/' in key and key.endswith('.mp4'):
+                            sign_name = key.split('/')[-1].replace('.mp4', '')
+                            existing.add(sign_name)
+            
+            self.logger.info(f"Found {len(existing)} existing videos in S3")
+            return existing
+            
+        except Exception as e:
+            self.logger.warning(f"Could not load existing videos from S3: {e}")
+            return existing
     
     def get_page_content(self, url: str, retries: int = None) -> Optional[str]:
         """Fetch page content with retries"""
@@ -234,7 +264,11 @@ class ASLScraper:
     
     def process_sign(self, sign_name: str, letter: str) -> Tuple[bool, str]:
         """Process a single sign"""
-        # Check if already completed
+        # Check if already exists in S3 (most efficient check)
+        if sign_name in self.existing_videos:
+            return True, "already_in_s3"
+        
+        # Check if already completed in this session
         if sign_name in self.progress['completed_signs']:
             return True, "already_completed"
         
@@ -264,6 +298,8 @@ class ASLScraper:
             if not self.upload_to_s3(video_content, video_filename):
                 return False, "failed_to_upload_s3"
             metadata['s3_key'] = video_filename
+            # Add to existing videos set to prevent re-scraping
+            self.existing_videos.add(sign_name)
         
         if self.config.get("save_videos_locally", False):
             local_dir = self.videos_dir / letter
@@ -294,7 +330,7 @@ class ASLScraper:
                 success, reason = self.process_sign(sign_name, letter)
                 
                 if success:
-                    if reason != "already_completed":
+                    if reason not in ["already_completed", "already_in_s3"]:
                         local_count += 1
                         stats['successful'] += 1
                         self.progress['completed_signs'].append(sign_name)
@@ -341,15 +377,17 @@ class ASLScraper:
                 self.logger.error(f"Failed to fetch {letter}")
                 continue
             
-            # Extract pagination info
+            # Extract pagination info - find ALL pagination sections
             soup = BeautifulSoup(html, 'lxml')
-            pagination = soup.find('ul', class_='pagination')
+            paginations = soup.find_all('ul', class_='pagination')
             max_page = 1
             
-            if pagination:
+            # The second pagination (if exists) contains page numbers
+            for pagination in paginations:
                 page_links = pagination.find_all('a', href=True)
                 for link in page_links:
                     href = link['href']
+                    # Look for page numbers in the URL (e.g., /dictionary/a/34)
                     if f'/dictionary/{letter}/' in href:
                         try:
                             page_num = int(href.split('/')[-1])

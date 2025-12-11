@@ -1,0 +1,72 @@
+================================
+AWS SETUP COMPLETE ✅
+================================
+
+S3 BUCKET:
+  Name: asl-signs-videos
+  Region: us-east-1
+  URL: s3://asl-signs-videos
+
+EC2 INSTANCE:
+  Instance ID: i-0f138783164ba019d
+  Public IP: 3.236.22.95
+  Type: t3.micro (free tier)
+  AMI: Ubuntu 22.04 LTS
+  
+SSH KEY:
+  File: asl-scraper-key.pem (in current directory)
+  ⚠️ KEEP THIS FILE SAFE - you need it to connect!
+
+================================
+HOW TO CONNECT
+================================
+
+From Git Bash or terminal:
+
+  ssh -i asl-scraper-key.pem ubuntu@3.236.22.95
+
+(Wait ~2 minutes after launch for SSH to be ready)
+
+================================
+SETUP ON EC2
+================================
+
+Once connected, run:
+
+  sudo apt update && sudo apt upgrade -y
+  sudo apt install -y python3 python3-pip git
+  git clone YOUR_GITHUB_REPO_URL
+  cd YOUR_REPO_NAME
+  pip3 install -r requirements.txt
+
+================================
+RUN THE SCRAPER
+================================
+
+Test with one letter:
+  python3 scraper.py --letters a
+
+Run all letters in background:
+  nohup python3 scraper.py > output.log 2>&1 &
+
+Monitor progress:
+  tail -f logs/scraper_*.log
+
+================================
+COSTS (Estimated)
+================================
+
+With free tier:
+  - t3.micro: FREE for 750 hours/month (first 12 months)
+  - S3 storage: ~$0.10/month for 4.5 GB
+  - Total: ~$0.10/month
+
+After free tier:
+  - t3.micro: ~$7.50/month
+  - S3 storage: ~$0.10/month
+  - Total: ~$7.60/month
+
+⚠️ Remember to STOP or TERMINATE the instance when done!
+
+================================
+

@@ -1,0 +1,20 @@
+[Unit]
+Description=ASL Video Scraper Service
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/cyfer-signs
+ExecStart=/usr/bin/python3 /home/ubuntu/cyfer-signs/scraper.py
+Restart=on-failure
+RestartSec=10
+StandardOutput=append:/home/ubuntu/cyfer-signs/logs/service.log
+StandardError=append:/home/ubuntu/cyfer-signs/logs/service-error.log
+
+# Environment
+Environment="PATH=/usr/bin:/usr/local/bin"
+
+[Install]
+WantedBy=multi-user.target
+

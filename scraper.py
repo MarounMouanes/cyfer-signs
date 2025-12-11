@@ -16,6 +16,7 @@ from typing import Dict, List, Optional, Tuple
 from multiprocessing import Process, Queue, Manager
 from queue import Empty
 import requests
+import cloudscraper
 from bs4 import BeautifulSoup
 import boto3
 from botocore.exceptions import ClientError
@@ -43,6 +44,11 @@ class ASLScraper:
         self.metadata_dir.mkdir(exist_ok=True)
         if self.config.get("save_videos_locally", False):
             self.videos_dir.mkdir(exist_ok=True)
+        
+        # Initialize cloudscraper session
+        self.scraper = cloudscraper.create_scraper(
+            browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False}
+        )
         
         # Initialize S3 client
         if self.config.get("upload_to_s3", True):
@@ -105,19 +111,10 @@ class ASLScraper:
         if retries is None:
             retries = self.config['retry_attempts']
         
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1'
-        }
-        
         for attempt in range(retries):
             try:
                 time.sleep(self.config['request_delay'])
-                response = requests.get(url, headers=headers, timeout=30)
+                response = self.scraper.get(url, timeout=30)
                 response.raise_for_status()
                 return response.text
             except Exception as e:
@@ -187,10 +184,7 @@ class ASLScraper:
     def download_video(self, video_url: str) -> Optional[bytes]:
         """Download video content"""
         try:
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
-            response = requests.get(video_url, headers=headers, timeout=60)
+            response = self.scraper.get(video_url, timeout=60)
             response.raise_for_status()
             return response.content
         except Exception as e:

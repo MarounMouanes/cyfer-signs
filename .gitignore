@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+
+# Videos (if saved locally)
+videos/
+*.mp4
+
+# Logs
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# AWS credentials (never commit these!)
+.aws/
+credentials
+*.pem
+*.key
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+

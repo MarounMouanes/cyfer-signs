@@ -1,0 +1,15 @@
+{
+  "letters": ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"],
+  "num_workers": 4,
+  "request_delay": 0.5,
+  "retry_attempts": 3,
+  "retry_delay": 2,
+  "commit_every_n_videos": 10,
+  "s3_bucket_name": "asl-signs-videos",
+  "aws_region": "us-east-1",
+  "base_url": "https://www.signasl.org",
+  "video_host": "https://media.signbsl.com/videos/asl/youtube/mp4/",
+  "save_videos_locally": false,
+  "upload_to_s3": true
+}
+
